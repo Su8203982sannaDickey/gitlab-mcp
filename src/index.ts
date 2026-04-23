@@ -24,8 +24,9 @@ dotenv.config();
 const GITLAB_PERSONAL_ACCESS_TOKEN = process.env.GITLAB_PERSONAL_ACCESS_TOKEN;
 const GITLAB_API_URL =
   process.env.GITLAB_API_URL ?? "https://gitlab.com/api/v4";
+// Default to read-only mode for safety — set GITLAB_READ_ONLY_MODE=false to enable writes
 const GITLAB_READ_ONLY_MODE =
-  process.env.GITLAB_READ_ONLY_MODE === "true" ?? false;
+  process.env.GITLAB_READ_ONLY_MODE !== "false";
 
 if (!GITLAB_PERSONAL_ACCESS_TOKEN) {
   console.error(
@@ -104,7 +105,9 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 async function main(): Promise<void> {
   const transport = new StdioServerTransport();
   await server.connect(transport);
-  console.error("GitLab MCP server running on stdio");
+  console.error(
+    `gitlab-mcp server started (read-only: ${GITLAB_READ_ONLY_MODE})`
+  );
 }
 
 main().catch((err) => {
