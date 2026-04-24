@@ -28,11 +28,19 @@ const GITLAB_API_URL =
 const GITLAB_READ_ONLY_MODE =
   process.env.GITLAB_READ_ONLY_MODE !== "false";
 
+// Personal note: I run this against a self-hosted GitLab instance, so I always
+// set GITLAB_API_URL in my .env. Keeping read-only as the default is a good
+// safeguard while I'm still exploring the API.
+
 if (!GITLAB_PERSONAL_ACCESS_TOKEN) {
   console.error(
     "Error: GITLAB_PERSONAL_ACCESS_TOKEN environment variable is required."
   );
   process.exit(1);
+}
+
+if (GITLAB_READ_ONLY_MODE) {
+  console.error("Info: Running in read-only mode. Set GITLAB_READ_ONLY_MODE=false to enable write operations.");
 }
 
 /**
@@ -105,12 +113,9 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 async function main(): Promise<void> {
   const transport = new StdioServerTransport();
   await server.connect(transport);
-  console.error(
-    `gitlab-mcp server started (read-only: ${GITLAB_READ_ONLY_MODE})`
-  );
 }
 
-main().catch((err) => {
-  console.error("Fatal error:", err);
+main().catch((error) => {
+  console.error("Fatal error:", error);
   process.exit(1);
 });
