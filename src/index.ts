@@ -86,6 +86,18 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
 server.setRequestHandler(CallToolRequestSchema, async (request) => {
   const { name, arguments: args } = request.params;
 
+  // In read-only mode, reject any tool call that isn't marked as read-only,
+  // even if it somehow slipped past the list-tools filter.
+  if (GITLAB_READ_ONLY_MODE) {
+    const toolDef = toolDefinitions.find((t) => t.name === name);
+    if (toolDef && toolDef.readOnly !== true) {
+      return {
+        content: [{ type: "text", text: `Tool "${name}" is not available in read-only mode.` }],
+        isError: true,
+      };
+    }
+  }
+
   const handler = toolHandlers[name];
   if (!handler) {
     return {
@@ -98,7 +110,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     return await handler(gitlabClient, args ?? {});
   } catch (error: unknown) {
     const message =
-      error instanceof Error ? error.message : "An unexpected error occurred";
+      error instanceof Error ? error.message : String(error);
     return {
       content: [{ type: "text", text: `Error: ${message}` }],
       isError: true,
@@ -107,15 +119,14 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 });
 
 /**
- * Start the server using stdio transport so it can be driven by an MCP host
- * (e.g. Claude Desktop, Cursor, or any MCP-compatible client).
+ * Start the MCP server using stdio transport.
  */
-async function main(): Promise<void> {
+async function main() {
   const transport = new StdioServerTransport();
   await server.connect(transport);
 }
 
-main().catch((error) => {
-  console.error("Fatal error:", error);
+main().catch((err) => {
+  console.error("Fatal error starting server:", err);
   process.exit(1);
 });
