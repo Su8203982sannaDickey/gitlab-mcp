@@ -40,7 +40,11 @@ if (!GITLAB_PERSONAL_ACCESS_TOKEN) {
 }
 
 if (GITLAB_READ_ONLY_MODE) {
-  console.error("Info: Running in read-only mode. Set GITLAB_READ_ONLY_MODE=false to enable write operations.");
+  // Use stdout so this shows up clearly when piping logs — stderr can get lost
+  // in some terminal setups I use.
+  console.log("[gitlab-mcp] Running in read-only mode. Set GITLAB_READ_ONLY_MODE=false to enable write operations.");
+} else {
+  console.log("[gitlab-mcp] Running in read-write mode.");
 }
 
 /**
@@ -92,41 +96,4 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     const toolDef = toolDefinitions.find((t) => t.name === name);
     if (toolDef && toolDef.readOnly !== true) {
       return {
-        content: [{ type: "text", text: `Tool "${name}" is not available in read-only mode.` }],
-        isError: true,
-      };
-    }
-  }
-
-  const handler = toolHandlers[name];
-  if (!handler) {
-    return {
-      content: [{ type: "text", text: `Unknown tool: ${name}` }],
-      isError: true,
-    };
-  }
-
-  try {
-    return await handler(gitlabClient, args ?? {});
-  } catch (error: unknown) {
-    const message =
-      error instanceof Error ? error.message : String(error);
-    return {
-      content: [{ type: "text", text: `Error: ${message}` }],
-      isError: true,
-    };
-  }
-});
-
-/**
- * Start the MCP server using stdio transport.
- */
-async function main() {
-  const transport = new StdioServerTransport();
-  await server.connect(transport);
-}
-
-main().catch((err) => {
-  console.error("Fatal error starting server:", err);
-  process.exit(1);
-});
+        content: [{ typ
